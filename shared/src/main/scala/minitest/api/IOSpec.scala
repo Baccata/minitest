@@ -17,17 +17,29 @@
 
 package minitest.api
 
+import cats.effect.{ Effect, IO, Sync }
+import cats.syntax.all._
+
 import scala.util.control.NonFatal
 
-object Utils {
-  def silent[T](cb: => T): Unit =
-    try { cb; () } catch {
-      case NonFatal(_) => ()
-    }
+case class IOSpec[F[_], I, O](name: String, f: I => F[Result[O]])
+    extends (I => F[Result[O]]) {
 
-  object discard {
-    def apply[T]: T => Unit = { t =>
-      val _ = t
-    }
-  }
+  override def apply(v1: I): F[Result[O]] = f(v1)
+
+  def asIO(implicit F: Effect[F]): IOSpec[IO, I, O] =
+    IOSpec(name, f andThen F.toIO)
+}
+
+object IOSpec {
+  def create[F[_], Env](name: String, cb: Env => F[Unit])(
+      implicit F: Sync[F]): IOSpec[F, Env, Unit] =
+    IOSpec(name, { env =>
+      cb(env)
+        .map(u => Result.success(u))
+        .recoverWith {
+          case NonFatal(ex) => F.pure(Result.from(ex))
+        }
+    })
+
 }

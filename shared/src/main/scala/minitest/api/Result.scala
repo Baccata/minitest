@@ -71,6 +71,8 @@ object Result {
     }
   }
 
+  def success[A](a : A) : Result[A] = Success(a)
+
   def from(error: Throwable): Result[Nothing] = error match {
     case ex: AssertionException =>
       Result.Failure(ex.message, Some(ex), Some(ex.location))

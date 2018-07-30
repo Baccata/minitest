@@ -17,17 +17,9 @@
 
 package minitest.api
 
-import scala.util.control.NonFatal
+import scala.scalajs.reflect.annotation.EnableReflectiveInstantiation
 
-object Utils {
-  def silent[T](cb: => T): Unit =
-    try { cb; () } catch {
-      case NonFatal(_) => ()
-    }
-
-  object discard {
-    def apply[T]: T => Unit = { t =>
-      val _ = t
-    }
-  }
+@EnableReflectiveInstantiation
+trait AbstractIOTestSuite[F[_]] {
+  def properties: IOProps[F, _, _]
 }

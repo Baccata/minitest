@@ -17,6 +17,7 @@
 
 package minitest.runner
 
+import minitest.api.Utils.discard
 import minitest.runner.Framework.ModuleFingerprint
 import sbt.testing.{Framework => BaseFramework, _}
 
@@ -29,8 +30,10 @@ class Framework extends BaseFramework {
   def runner(args: Array[String], remoteArgs: Array[String], testClassLoader: ClassLoader): Runner =
     new Runner(args, remoteArgs, testClassLoader)
 
-  def slaveRunner(args: Array[String], remoteArgs: Array[String], testClassLoader: ClassLoader, send: (String) => Unit): Runner =
+  def slaveRunner(args: Array[String], remoteArgs: Array[String], testClassLoader: ClassLoader, send: String => Unit): Runner = {
+    discard[String => Unit](send)
     runner(args, remoteArgs, testClassLoader)
+  }
 }
 
 object Framework {

@@ -15,19 +15,19 @@
  * limitations under the License.
  */
 
-package minitest.api
+package minitest
 
-import scala.util.control.NonFatal
+import cats.effect.Effect
+import minitest.api._
 
-object Utils {
-  def silent[T](cb: => T): Unit =
-    try { cb; () } catch {
-      case NonFatal(_) => ()
-    }
+abstract class SimpleIOTestSuite[F[_]](
+    implicit
+    F: Effect[F])
+    extends IOTestSuite[F, Unit, Unit]
+    with IOAsserts[F] {
+  def setupSuite: F[Unit]             = F.unit
+  def tearDownSuite(g: Unit): F[Unit] = F.unit
+  def setup(g: Unit): F[Unit]         = F.unit
+  def tearDown(env: Unit): F[Unit]    = F.unit
 
-  object discard {
-    def apply[T]: T => Unit = { t =>
-      val _ = t
-    }
-  }
 }

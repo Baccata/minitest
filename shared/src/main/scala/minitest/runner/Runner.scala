@@ -17,6 +17,7 @@
 
 package minitest.runner
 
+import minitest.api.Utils.discard
 import sbt.testing.{Runner => BaseRunner, Task => BaseTask, _}
 
 final class Runner(
@@ -32,12 +33,13 @@ final class Runner(
   }
 
   def receiveMessage(msg: String): Option[String] = {
+    discard[String](msg)
     None
   }
 
-  def serializeTask(task: BaseTask, serializer: (TaskDef) => String): String =
+  def serializeTask(task: BaseTask, serializer: TaskDef => String): String =
     serializer(task.taskDef())
 
-  def deserializeTask(task: String, deserializer: (String) => TaskDef): BaseTask =
+  def deserializeTask(task: String, deserializer: String => TaskDef): BaseTask =
     new Task(deserializer(task), classLoader)
 }
