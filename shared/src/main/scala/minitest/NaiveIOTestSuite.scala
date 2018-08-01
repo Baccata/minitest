@@ -15,11 +15,22 @@
  * limitations under the License.
  */
 
-package minitest.api
+package minitest
 
-import scala.scalajs.reflect.annotation.EnableReflectiveInstantiation
+import minitest.api._
 
-@EnableReflectiveInstantiation
-trait AbstractIOTestSuite {
-  def properties: AbstractIOProps
+abstract class NaiveIOTestSuite[F[_], AF[_], Global, Local]
+    extends IOTestSuite[F, AF, Global, Local]
+    with IOAsserts[F] {
+
+  def setupSuite: F[Global]
+  def tearDownSuite(g: Global): F[Unit]
+  def setup(g: Global): F[Local]
+  def tearDown(env: Local): F[Unit]
+
+  override final def globalBracket[A](withG: Global => F[A]): F[A] =
+    F.bracket(setupSuite)(withG)(tearDownSuite)
+
+  override final def localBracket[A](withL: Local => F[A]): Global => F[A] =
+    global => F.bracket(setup(global))(withL)(tearDown)
 }

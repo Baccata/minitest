@@ -17,9 +17,10 @@
 
 package minitest.api
 
-import cats.effect.{ Effect, IO, Sync }
+import cats.effect.{ Effect, Sync, Timer }
 import cats.syntax.all._
 
+import scala.concurrent.duration.{ FiniteDuration, MILLISECONDS, _ }
 import scala.util.control.NonFatal
 
 case class IOSpec[F[_], I, O](name: String, f: I => F[Result[O]])
@@ -27,8 +28,15 @@ case class IOSpec[F[_], I, O](name: String, f: I => F[Result[O]])
 
   override def apply(v1: I): F[Result[O]] = f(v1)
 
-  def asIO(implicit F: Effect[F]): IOSpec[IO, I, O] =
-    IOSpec(name, f andThen F.toIO)
+  def compile(i: I)(
+      implicit F: Effect[F],
+      T: Timer[F],
+  ): F[Event] =
+    for {
+      start <- Timer[F].clockRealTime(MILLISECONDS)
+      res   <- apply(i)
+      end   <- Timer[F].clockRealTime(MILLISECONDS)
+    } yield Event(name, (end - start).millis, res.asInstanceOf[Result[Unit]])
 }
 
 object IOSpec {
@@ -43,3 +51,5 @@ object IOSpec {
     })
 
 }
+
+case class Event(name: String, duration: FiniteDuration, result: Result[Unit])

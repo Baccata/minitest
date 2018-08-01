@@ -17,39 +17,43 @@
 
 package minitest.api
 
-import cats.effect.{ Effect, IO }
 import cats.effect.implicits._
+import cats.effect.{ Effect, IO, Timer }
 import cats.implicits._
+import cats.{ Parallel, ~> }
+import minitest.api.IOProps.Kl
 
-import scala.concurrent.ExecutionContext
-
-case class IOProps[F[_], G, L](
-    setup: G => F[L],
-    tearDown: L => F[Unit],
-    setupSuite: F[G],
-    tearDownSuite: G => F[Unit],
-    properties: Seq[IOSpec[F, L, Unit]])(
+case class IOProps[F[_], AF[_], G, L](
+    globalBracket: Kl[F, G, ?] ~> F,
+    localBracket: Kl[F, L, ?] ~> Kl[F, G, ?],
+    properties: List[IOSpec[F, L, Unit]])(
     implicit
     F: Effect[F],
-    ec: ExecutionContext) {
+    P: Parallel[F, AF],
+    T: Timer[F])
+    extends AbstractIOProps {
 
-  private def compile(global: G)(
-      spec: IOSpec[F, L, Unit]): IOSpec[F, Unit, Unit] =
-    IOSpec.create[F, Unit](spec.name, { _ =>
-      for {
-        local <- setup(global)
-        _     <- spec.f(local)
-        _     <- tearDown(local)
-      } yield ()
-    })
-
-  def runSuite(runSpec: IOSpec[IO, Unit, Unit] => IO[Unit]): IO[Unit] =
-    setupSuite.toIO.bracket { g =>
-      properties.toList
-        .map(compile(g))
-        .map(_.asIO)
-        .parTraverse(runSpec)
+  def compile(runSpec: Event => IO[Unit]): IO[Unit] =
+    globalBracket[Unit] { g =>
+      properties
+        .parTraverse { spec =>
+          localBracket { l =>
+            spec.compile(l).flatMap(runSpec andThen F.liftIO[Unit])
+          }.apply(g)
+        }
         .map(_ => ())
-    }(tearDownSuite andThen F.toIO)
+    }.toIO
+
+}
+
+trait AbstractIOProps {
+
+  def compile(runSpec: Event => IO[Unit]): IO[Unit]
+
+}
+
+object IOProps {
+
+  type Kl[F[_], A, B] = A => F[B]
 
 }

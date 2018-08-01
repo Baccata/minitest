@@ -17,17 +17,17 @@
 
 package minitest
 
-import cats.effect.Effect
 import minitest.api._
 
-abstract class SimpleIOTestSuite[F[_]](
-    implicit
-    F: Effect[F])
-    extends IOTestSuite[F, Unit, Unit]
+abstract class SimpleIOTestSuite[F[_], AF[_]]
+    extends NaiveIOTestSuite[F, AF, Unit, Unit]
     with IOAsserts[F] {
-  def setupSuite: F[Unit]             = F.unit
-  def tearDownSuite(g: Unit): F[Unit] = F.unit
-  def setup(g: Unit): F[Unit]         = F.unit
-  def tearDown(env: Unit): F[Unit]    = F.unit
+
+  override def setupSuite: F[Unit]             = F.unit
+  override def tearDownSuite(g: Unit): F[Unit] = F.unit
+  override def setup(g: Unit): F[Unit]         = F.unit
+  override def tearDown(env: Unit): F[Unit]    = F.unit
+
+  def simpleTest(name: String)(f: => F[Unit]): Unit = test(name)(_ => f)
 
 }
