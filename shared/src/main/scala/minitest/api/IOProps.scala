@@ -33,22 +33,21 @@ case class IOProps[F[_], AF[_], G, L](
     T: Timer[F])
     extends AbstractIOProps {
 
-  def compile(runSpec: Event => IO[Unit]): IO[Unit] =
-    globalBracket[Unit] { g =>
+  def compile: IO[List[Event]] =
+    globalBracket { g =>
       properties
         .parTraverse { spec =>
           localBracket { l =>
-            spec.compile(l).flatMap(runSpec andThen F.liftIO[Unit])
+            spec.compile(l)
           }.apply(g)
         }
-        .map(_ => ())
     }.toIO
 
 }
 
 trait AbstractIOProps {
 
-  def compile(runSpec: Event => IO[Unit]): IO[Unit]
+  def compile: IO[List[Event]]
 
 }
 

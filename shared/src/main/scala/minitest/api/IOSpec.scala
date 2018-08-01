@@ -17,11 +17,10 @@
 
 package minitest.api
 
-import cats.effect.{ Effect, Sync, Timer }
+import cats.effect.{Effect, Sync, Timer}
 import cats.syntax.all._
 
-import scala.concurrent.duration.{ FiniteDuration, MILLISECONDS, _ }
-import scala.util.control.NonFatal
+import scala.concurrent.duration.{FiniteDuration, MILLISECONDS, _}
 
 case class IOSpec[F[_], I, O](name: String, f: I => F[Result[O]])
     extends (I => F[Result[O]]) {
@@ -45,9 +44,7 @@ object IOSpec {
     IOSpec(name, { env =>
       cb(env)
         .map(u => Result.success(u))
-        .recoverWith {
-          case NonFatal(ex) => F.pure(Result.from(ex))
-        }
+        .handleError(ex => Result.from(ex))
     })
 
 }

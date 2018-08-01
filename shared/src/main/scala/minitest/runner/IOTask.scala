@@ -39,12 +39,17 @@ final class IOTask(task: TaskDef, cl: ClassLoader) extends BaseTask {
     val suiteIO = loadSuite(task.fullyQualifiedName(), cl).fold(IO.unit) {
       suite =>
         loggers.foreach(
-          _.info(Console.GREEN + task.fullyQualifiedName() + Console.RESET))
+          _.info(Console.CYAN + task.fullyQualifiedName() + Console.RESET))
 
-        suite.properties.compile(event =>
+        suite.properties.compile.flatMap(events =>
           IO {
-            loggers.foreach(_.info(event.result.formatted(event.name)))
-            eventHandler.handle(sbtEvent(event))
+            for {
+              event  <- events
+              logger <- loggers.toList
+            } {
+              logger.info(event.result.formatted(event.name))
+              eventHandler.handle(sbtEvent(event))
+            }
         })
     }
 

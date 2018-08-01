@@ -3,6 +3,8 @@ package io.tests
 import cats.Parallel
 import cats.effect.{ Effect, IO, Timer }
 import minitest.SimpleIOTestSuite
+import scala.concurrent.duration._
+import cats.implicits._
 
 object SimpleIOTest extends SimpleIOTestSuite[IO, IO.Par] {
 
@@ -12,8 +14,9 @@ object SimpleIOTest extends SimpleIOTestSuite[IO, IO.Par] {
   def T = Timer[IO]
   def P = Parallel[IO, IO.Par]
 
-  simpleTest("pipo")(IO { println("hello pipo!") })
+  simpleTest("pipo")(
+    T.sleep(2000.milliseconds) *> IO { println("hello pipo!") })
 
-  simpleTest("lino")(IO { println("hello lino!") })
+  simpleTest("lino")(assertEquals(2)(1))
 
 }

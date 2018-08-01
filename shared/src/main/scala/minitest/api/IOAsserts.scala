@@ -25,7 +25,6 @@ import cats.{Eq, Show}
 
 import scala.annotation.tailrec
 import scala.reflect.ClassTag
-import scala.util.control.NonFatal
 
 trait IOAsserts[F[_]] {
 
@@ -38,9 +37,9 @@ trait IOAsserts[F[_]] {
         if (_) F.unit
         else F.raiseError(new AssertionException(hint, pos))
       }
-      .handleErrorWith {
-        case NonFatal(ex) => F.raiseError(new UnexpectedException(ex, pos))
-        case e            => F.raiseError(e)
+      .recoverWith {
+        case NotOurException(ex) =>
+          F.raiseError(new UnexpectedException(ex, pos))
       }
 
   def assert(condition: => Boolean)(
@@ -66,9 +65,9 @@ trait IOAsserts[F[_]] {
           val msg = Asserts.format(hint, rs.show, expected.show)
           F.raiseError(new AssertionException(msg, pos))
       }
-      .handleErrorWith {
-        case NonFatal(ex) => F.raiseError(new UnexpectedException(ex, pos))
-        case e            => F.raiseError(e)
+      .recoverWith {
+        case NotOurException(ex) =>
+          F.raiseError(new UnexpectedException(ex, pos))
       }
 
   def intercept[E <: Throwable](cb: F[Unit])(
@@ -80,8 +79,8 @@ trait IOAsserts[F[_]] {
         val msg  = s"expected a $name to be thrown"
         F.raiseError(new AssertionException(msg, pos))
       }
-      .handleErrorWith {
-        case NonFatal(ex) if E.runtimeClass.isInstance(ex) => F.unit
+      .recoverWith {
+        case NotOurException(ex) if E.runtimeClass.isInstance(ex) => F.unit
       }
 
   def cancel(implicit F: Sync[F], pos: SourceLocation): F[Unit] =

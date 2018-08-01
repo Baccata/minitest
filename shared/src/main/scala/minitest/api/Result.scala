@@ -18,16 +18,17 @@
 package minitest.api
 
 import scala.compat.Platform.EOL
-import scala.Console.{GREEN, RED, YELLOW}
+import scala.Console.{GREEN, RED, YELLOW, RESET}
 
 sealed trait Result[+T] {
   def formatted(name: String): String
 }
 
 object Result {
+
   final case class Success[+T](value: T) extends Result[T] {
     def formatted(name: String): String = {
-      GREEN + "- " + name + EOL
+      GREEN + "+ " + RESET + name + EOL
     }
   }
 
@@ -53,7 +54,7 @@ object Result {
     extends Result[Nothing] {
 
     def formatted(name: String): String =
-      formatError(name, msg, source, location, Some(20))
+      formatError(name, msg, source, location, Some(0))
   }
 
   final case class Exception(source: Throwable, location: Option[SourceLocation])
@@ -73,19 +74,21 @@ object Result {
 
   def success[A](a : A) : Result[A] = Success(a)
 
-  def from(error: Throwable): Result[Nothing] = error match {
-    case ex: AssertionException =>
-      Result.Failure(ex.message, Some(ex), Some(ex.location))
-    case ex: UnexpectedException =>
-      Result.Exception(ex.reason, Some(ex.location))
-    case ex: InterceptException =>
-      Result.Exception(ex, Some(ex.location))
-    case ex: IgnoredException =>
-      Result.Ignored(ex.reason, ex.location)
-    case ex: CanceledException =>
-      Result.Canceled(ex.reason, ex.location)
-    case other =>
-      Result.Exception(other, None)
+  def from(error: Throwable): Result[Nothing] = {
+    error match {
+      case ex: AssertionException =>
+        Result.Failure(ex.message, Some(ex), Some(ex.location))
+      case ex: UnexpectedException =>
+        Result.Exception(ex.reason, Some(ex.location))
+      case ex: InterceptException =>
+        Result.Exception(ex, Some(ex.location))
+      case ex: IgnoredException =>
+        Result.Ignored(ex.reason, ex.location)
+      case ex: CanceledException =>
+        Result.Canceled(ex.reason, ex.location)
+      case other =>
+        Result.Exception(other, None)
+    }
   }
 
   private def formatError(name: String, msg: String,
@@ -110,7 +113,7 @@ object Result {
       location, RED, "  "
     )
 
-    RED + s"- $name *** FAILED ***" + EOL +
+    RED + s"- $RESET$name$RED *** FAILED ***" + EOL +
       formattedMessage + stackTrace
   }
 
