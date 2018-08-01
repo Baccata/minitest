@@ -1,22 +1,17 @@
 package io.tests
 
-import cats.Parallel
-import cats.effect.{ Effect, IO, Timer }
-import minitest.SimpleIOTestSuite
-import scala.concurrent.duration._
+import cats.effect.IO
 import cats.implicits._
+import minitest.SimpleIOTestSuite
 
-object SimpleIOTest extends SimpleIOTestSuite[IO, IO.Par] {
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit def ec = scala.concurrent.ExecutionContext.Implicits.global
-
-  def F = Effect[IO]
-  def T = Timer[IO]
-  def P = Parallel[IO, IO.Par]
+object SimpleIOTest extends SimpleIOTestSuite[IO] {
 
   simpleTest("pipo")(
-    T.sleep(2000.milliseconds) *> IO { println("hello pipo!") })
+    T.sleep(5000.milliseconds) *> IO { println("hello pipo!") })
 
-  simpleTest("lino")(assertEquals(2)(1))
+  simpleTest("lino")(T.sleep(5000.milliseconds) *> assertEquals(2)(1))
 
 }

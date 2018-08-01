@@ -17,7 +17,8 @@
 
 package minitest.api
 
-import cats.effect.{Effect, Sync, Timer}
+import cats.FlatMap
+import cats.effect.{Sync, Timer}
 import cats.syntax.all._
 
 import scala.concurrent.duration.{FiniteDuration, MILLISECONDS, _}
@@ -28,7 +29,7 @@ case class IOSpec[F[_], I, O](name: String, f: I => F[Result[O]])
   override def apply(v1: I): F[Result[O]] = f(v1)
 
   def compile(i: I)(
-      implicit F: Effect[F],
+      implicit F: FlatMap[F],
       T: Timer[F],
   ): F[Event] =
     for {

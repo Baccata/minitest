@@ -17,30 +17,27 @@
 
 package minitest.api
 
-import cats.effect.implicits._
-import cats.effect.{ Effect, IO, Timer }
+import cats.effect.{ ConcurrentEffect, Fiber, IO, Timer }
 import cats.implicits._
-import cats.{ Parallel, ~> }
+import cats.effect.implicits._
+import cats.~>
 import minitest.api.IOProps.Kl
 
-case class IOProps[F[_], AF[_], G, L](
+case class IOProps[F[_] : ConcurrentEffect : Timer, G, L](
     globalBracket: Kl[F, G, ?] ~> F,
     localBracket: Kl[F, L, ?] ~> Kl[F, G, ?],
-    properties: List[IOSpec[F, L, Unit]])(
-    implicit
-    F: Effect[F],
-    P: Parallel[F, AF],
-    T: Timer[F])
+    properties: List[IOSpec[F, L, Unit]])
     extends AbstractIOProps {
 
   def compile: IO[List[Event]] =
     globalBracket { g =>
-      properties
-        .parTraverse { spec =>
+      val p: F[List[Fiber[F, Event]]] = properties
+        .traverse[F, Fiber[F, Event]] { spec =>
           localBracket { l =>
             spec.compile(l)
-          }.apply(g)
+          }.apply(g).start
         }
+      p.flatMap(_.traverse(fiber => fiber.join))
     }.toIO
 
 }

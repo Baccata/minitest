@@ -17,11 +17,10 @@
 
 package minitest
 
-import minitest.api._
+import cats.effect.{ ConcurrentEffect, Timer }
 
-abstract class NaiveIOTestSuite[F[_], AF[_], Global, Local]
-    extends IOTestSuite[F, AF, Global, Local]
-    with IOAsserts[F] {
+abstract class NaiveIOTestSuite[F[_]: ConcurrentEffect: Timer, Global, Local]
+    extends IOTestSuite[F, Global, Local] {
 
   def setupSuite: F[Global]
   def tearDownSuite(g: Global): F[Unit]
