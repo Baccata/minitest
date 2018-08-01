@@ -74,7 +74,8 @@ abstract class StreamTestSuite[F[_]: ConcurrentEffect, Global, Local](
     with IOAsserts[Stream[F, ?]] {
 
   def globalBracket[A](withG: Global => Stream[F, A]): Stream[F, A]
-  def localBracket[A](withL: Local => Stream[F, A]): Global => Stream[F, A]
+  def localBracket[A](withL: Local => Stream[F, A])(
+      global: Global): Stream[F, A]
 
   protected val F = ConcurrentEffect[F]
   protected val T = Timer.derive[F]

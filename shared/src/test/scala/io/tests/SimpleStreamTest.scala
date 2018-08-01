@@ -11,6 +11,9 @@ import fs2._
 object SimpleStreamTest extends SimpleStreamTestSuite[IO] {
 
   simpleTest("stream pipo!")(
-    Stream(1, 2, 3, 4, 5).covary[IO].to(Sink.showLinesStdOut).take(1))
+    Stream(1, 2, 3, 4, 5).covary[IO].to(Sink.showLinesStdOut).take(1)
+  )
+
+
 
 }

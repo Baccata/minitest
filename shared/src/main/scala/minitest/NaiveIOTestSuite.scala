@@ -53,12 +53,11 @@ abstract class NaiveStreamTestSuite[F[_]: ConcurrentEffect, Global, Local](
       _      <- Stream.eval(tearDownSuite(global))
     } yield a
 
-  override def localBracket[A](
-      withL: Local => Stream[F, A]): Global => Stream[F, A] =
-    global =>
-      for {
-        local <- Stream.eval(setup(global))
-        a     <- withL(local)
-        _     <- Stream.eval(tearDown(local))
-      } yield a
+  override def localBracket[A](withL: Local => Stream[F, A])(
+      global: Global): Stream[F, A] =
+    for {
+      local <- Stream.eval(setup(global))
+      a     <- withL(local)
+      _     <- Stream.eval(tearDown(local))
+    } yield a
 }
