@@ -19,7 +19,7 @@ package minitest.runner
 
 import minitest.api._
 import org.scalajs.testinterface.TestUtils
-import sbt.testing.{Task => BaseTask, _}
+import sbt.testing.{Task => BaseTask, Event => BaseEvent, _}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.util.Try
@@ -72,7 +72,7 @@ final class Task(task: TaskDef, cl: ClassLoader) extends BaseTask {
       .collect { case ref: AbstractTestSuite => ref }
   }
 
-  def event(result: Result[Unit], durationMillis: Long): Event = new Event {
+  def event(result: Result[Unit], durationMillis: Long): BaseEvent = new BaseEvent {
     def fullyQualifiedName(): String =
       task.fullyQualifiedName()
 

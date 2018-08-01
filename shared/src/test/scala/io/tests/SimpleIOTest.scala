@@ -12,8 +12,8 @@ object SimpleIOTest extends SimpleIOTestSuite[IO, IO.Par] {
   def T = Timer[IO]
   def P = Parallel[IO, IO.Par]
 
-  simpleTest("pipo")(IO { Thread.sleep(1000); println("hello pipo!") })
+  simpleTest("pipo")(IO { println("hello pipo!") })
 
-  simpleTest("lino")(IO { Thread.sleep(500); println("hello lino!") })
+  simpleTest("lino")(IO { println("hello lino!") })
 
 }

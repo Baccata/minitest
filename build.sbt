@@ -191,7 +191,8 @@ lazy val minitest = crossProject(JVMPlatform, JSPlatform, NativePlatform)
       "org.scala-sbt" % "test-interface" % "1.0",
       "org.scala-js" %% "scalajs-stubs" % scalaJSVersion % "provided",
       "org.typelevel" %% "cats-core" % "1.2.0",
-      "org.typelevel" %% "cats-effect" % "1.0.0-RC2"
+      "org.typelevel" %% "cats-effect" % "1.0.0-RC2",
+      "co.fs2" %% "fs2-core" % "0.10.5"
     ),
   )
   .jsSettings(
@@ -199,7 +200,8 @@ lazy val minitest = crossProject(JVMPlatform, JSPlatform, NativePlatform)
     libraryDependencies ++= Seq(
       "org.scala-js" %% "scalajs-test-interface" % scalaJSVersion,
       "org.typelevel" %%% "cats-core" % "1.2.0",
-      "org.typelevel" %%% "cats-effect" % "1.0.0-RC2"
+      "org.typelevel" %%% "cats-effect" % "1.0.0-RC2",
+      "co.fs2" %%% "fs2-core" % "0.10.5"
     )
   )
 
