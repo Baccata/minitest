@@ -18,10 +18,12 @@
 package minitest.api
 
 import cats.FlatMap
-import cats.effect.{Sync, Timer}
+import cats.effect.{ Sync, Timer }
 import cats.syntax.all._
 
-import scala.concurrent.duration.{FiniteDuration, MILLISECONDS, _}
+import fs2.Stream
+
+import scala.concurrent.duration.{ FiniteDuration, MILLISECONDS, _ }
 
 case class IOSpec[F[_], I, O](name: String, f: I => F[Result[O]])
     extends (I => F[Result[O]]) {
@@ -30,12 +32,12 @@ case class IOSpec[F[_], I, O](name: String, f: I => F[Result[O]])
 
   def compile(i: I)(
       implicit F: FlatMap[F],
-      T: Timer[F],
+      T: Timer[F]
   ): F[Event] =
     for {
-      start <- Timer[F].clockRealTime(MILLISECONDS)
+      start <- T.clockRealTime(MILLISECONDS)
       res   <- apply(i)
-      end   <- Timer[F].clockRealTime(MILLISECONDS)
+      end   <- T.clockRealTime(MILLISECONDS)
     } yield Event(name, (end - start).millis, res.asInstanceOf[Result[Unit]])
 }
 
@@ -46,6 +48,32 @@ object IOSpec {
       cb(env)
         .map(u => Result.success(u))
         .handleError(ex => Result.from(ex))
+    })
+
+}
+
+case class StreamSpec[F[_], I, O](name: String, f: I => Stream[F, Result[O]])
+    extends (I => Stream[F, Result[O]]) {
+
+  override def apply(v1: I): Stream[F, Result[O]] = f(v1)
+
+  def compile(i: I)(implicit T: Timer[F]): Stream[F, Event] =
+    for {
+      start <- Stream.eval(T.clockRealTime(MILLISECONDS))
+      res   <- apply(i)
+      end   <- Stream.eval(T.clockRealTime(MILLISECONDS))
+    } yield Event(name, (end - start).millis, res.asInstanceOf[Result[Unit]])
+
+}
+
+object StreamSpec {
+  def create[F[_], Env](
+      name: String,
+      cb: Env => Stream[F, Unit]): StreamSpec[F, Env, Unit] =
+    StreamSpec(name, { env =>
+      cb(env)
+        .map(u => Result.success(u))
+        .handleErrorWith(ex => Stream.emit(Result.from(ex)))
     })
 
 }

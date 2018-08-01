@@ -18,6 +18,9 @@
 package minitest
 
 import cats.effect.{ ConcurrentEffect, Timer }
+import fs2._
+
+import scala.concurrent.ExecutionContext
 
 abstract class SimpleIOTestSuite[F[_]: ConcurrentEffect: Timer]
     extends NaiveIOTestSuite[F, Unit, Unit] {
@@ -28,5 +31,18 @@ abstract class SimpleIOTestSuite[F[_]: ConcurrentEffect: Timer]
   override def tearDown(env: Unit): F[Unit]    = F.unit
 
   def simpleTest(name: String)(f: => F[Unit]): Unit = test(name)(_ => f)
+
+}
+
+abstract class SimpleStreamTestSuite[F[_]: ConcurrentEffect](
+    implicit ec: ExecutionContext)
+    extends NaiveStreamTestSuite[F, Unit, Unit] {
+
+  override def setupSuite: F[Unit]             = F.unit
+  override def tearDownSuite(g: Unit): F[Unit] = F.unit
+  override def setup(g: Unit): F[Unit]         = F.unit
+  override def tearDown(env: Unit): F[Unit]    = F.unit
+
+  def simpleTest(name: String)(f: => Stream[F, Unit]): Unit = test(name)(_ => f)
 
 }

@@ -17,12 +17,16 @@
 
 package minitest
 
-import cats.effect.{ConcurrentEffect, Timer}
+import cats.effect.{ ConcurrentEffect, Timer }
 import cats.~>
 import minitest.api.IOProps._
 import minitest.api._
+import fs2._
+import minitest.api.StreamProps.Kls
 
-abstract class IOTestSuite[F[_] : ConcurrentEffect : Timer , Global, Local]
+import scala.concurrent.ExecutionContext
+
+abstract class IOTestSuite[F[_]: ConcurrentEffect: Timer, Global, Local]
     extends AbstractIOTestSuite
     with IOAsserts[F] {
 
@@ -56,6 +60,51 @@ abstract class IOTestSuite[F[_] : ConcurrentEffect : Timer , Global, Local]
     }
 
   private[this] var propertiesSeq = Seq.empty[IOSpec[F, Local, Unit]]
+  private[this] var isInitialized = false
+
+  private[this] def initError() =
+    new AssertionError(
+      "Cannot define new tests after TestSuite was initialized"
+    )
+}
+
+abstract class StreamTestSuite[F[_]: ConcurrentEffect, Global, Local](
+    implicit ec: ExecutionContext)
+    extends AbstractIOTestSuite
+    with IOAsserts[Stream[F, ?]] {
+
+  def globalBracket[A](withG: Global => Stream[F, A]): Stream[F, A]
+  def localBracket[A](withL: Local => Stream[F, A]): Global => Stream[F, A]
+
+  protected val F = ConcurrentEffect[F]
+  protected val T = Timer.derive[F]
+
+  def test(name: String)(f: Local => Stream[F, Unit]): Unit =
+    synchronized {
+      if (isInitialized) throw initError()
+      propertiesSeq = propertiesSeq :+ StreamSpec
+        .create[F, Local](name, env => f(env))
+    }
+
+  lazy val properties: StreamProps[F, _, _] =
+    synchronized {
+      if (!isInitialized) isInitialized = true
+      val gb: Kls[F, Global, ?] ~> Stream[F, ?] =
+        new (Kls[F, Global, ?] ~> Stream[F, ?]) {
+          override def apply[A](fa: Kls[F, Global, A]): Stream[F, A] =
+            globalBracket(fa)
+        }
+
+      val lb: Kls[F, Local, ?] ~> Kls[F, Global, ?] =
+        new (Kls[F, Local, ?] ~> Kls[F, Global, ?]) {
+          override def apply[A](fa: Kls[F, Local, A]): Kls[F, Global, A] =
+            localBracket(fa)
+        }
+
+      StreamProps[F, Global, Local](gb, lb, propertiesSeq.toList)
+    }
+
+  private[this] var propertiesSeq = Seq.empty[StreamSpec[F, Local, Unit]]
   private[this] var isInitialized = false
 
   private[this] def initError() =

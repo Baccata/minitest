@@ -19,6 +19,10 @@ package minitest
 
 import cats.effect.{ ConcurrentEffect, Timer }
 
+import scala.concurrent.ExecutionContext
+
+import fs2._
+
 abstract class NaiveIOTestSuite[F[_]: ConcurrentEffect: Timer, Global, Local]
     extends IOTestSuite[F, Global, Local] {
 
@@ -32,4 +36,29 @@ abstract class NaiveIOTestSuite[F[_]: ConcurrentEffect: Timer, Global, Local]
 
   override final def localBracket[A](withL: Local => F[A]): Global => F[A] =
     global => F.bracket(setup(global))(withL)(tearDown)
+}
+abstract class NaiveStreamTestSuite[F[_]: ConcurrentEffect, Global, Local](
+    implicit ec: ExecutionContext)
+    extends StreamTestSuite[F, Global, Local] {
+
+  def setupSuite: F[Global]
+  def tearDownSuite(g: Global): F[Unit]
+  def setup(g: Global): F[Local]
+  def tearDown(env: Local): F[Unit]
+
+  override def globalBracket[A](withG: Global => Stream[F, A]): Stream[F, A] =
+    for {
+      global <- Stream.eval(setupSuite)
+      a      <- withG(global)
+      _      <- Stream.eval(tearDownSuite(global))
+    } yield a
+
+  override def localBracket[A](
+      withL: Local => Stream[F, A]): Global => Stream[F, A] =
+    global =>
+      for {
+        local <- Stream.eval(setup(global))
+        a     <- withL(local)
+        _     <- Stream.eval(tearDown(local))
+      } yield a
 }

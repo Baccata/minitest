@@ -22,8 +22,18 @@ import cats.implicits._
 import cats.effect.implicits._
 import cats.~>
 import minitest.api.IOProps.Kl
+import minitest.api.StreamProps.Kls
 
-case class IOProps[F[_] : ConcurrentEffect : Timer, G, L](
+import scala.concurrent.ExecutionContext
+//import minitest.api.StreamProps.Kls
+
+import fs2.Stream
+
+sealed trait AbstractIOProps {
+  def compile: IO[List[Event]]
+}
+
+case class IOProps[F[_]: ConcurrentEffect: Timer, G, L](
     globalBracket: Kl[F, G, ?] ~> F,
     localBracket: Kl[F, L, ?] ~> Kl[F, G, ?],
     properties: List[IOSpec[F, L, Unit]])
@@ -31,25 +41,44 @@ case class IOProps[F[_] : ConcurrentEffect : Timer, G, L](
 
   def compile: IO[List[Event]] =
     globalBracket { g =>
-      val p: F[List[Fiber[F, Event]]] = properties
+      properties
         .traverse[F, Fiber[F, Event]] { spec =>
           localBracket { l =>
             spec.compile(l)
           }.apply(g).start
         }
-      p.flatMap(_.traverse(fiber => fiber.join))
+        .flatMap(_.traverse(fiber => fiber.join))
     }.toIO
 
 }
 
-trait AbstractIOProps {
+object IOProps {
+  type Kl[F[_], A, B] = A => F[B]
+}
 
-  def compile: IO[List[Event]]
+case class StreamProps[F[_]: ConcurrentEffect, G, L](
+    globalBracket: Kls[F, G, ?] ~> Stream[F, ?],
+    localBracket: Kls[F, L, ?] ~> Kls[F, G, ?],
+    properties: List[StreamSpec[F, L, Unit]])(implicit ec: ExecutionContext)
+    extends AbstractIOProps {
+
+  private implicit val T: Timer[F] = Timer.derive[F]
+
+  def compile: IO[List[Event]] = {
+    globalBracket { g =>
+      Stream
+        .emits(properties)
+        .map { spec =>
+          localBracket { l =>
+            spec.compile(l)
+          }.apply(g)
+        }
+        .join(10)
+    }.compile.toList.toIO
+  }
 
 }
 
-object IOProps {
-
-  type Kl[F[_], A, B] = A => F[B]
-
+object StreamProps {
+  type Kls[F[_], A, B] = A => Stream[F, B]
 }
