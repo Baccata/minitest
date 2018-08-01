@@ -134,7 +134,7 @@ lazy val sharedSettings = Seq(
   ),
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.7"),
   testFrameworks := Seq(
-    new TestFramework("minitest.runner.Framework"),
+//    new TestFramework("minitest.runner.Framework"),
     new TestFramework("minitest.runner.IOFramework")
   )
 

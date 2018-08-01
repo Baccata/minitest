@@ -22,7 +22,8 @@ import minitest.api._
 import org.scalajs.testinterface.TestUtils
 import sbt.testing.{ Event => BaseEvent, Task => BaseTask, _ }
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, ExecutionContext, Promise }
 import scala.util.Try
 
 final class IOTask(task: TaskDef, cl: ClassLoader) extends BaseTask {
@@ -33,8 +34,8 @@ final class IOTask(task: TaskDef, cl: ClassLoader) extends BaseTask {
 
   def execute(
       eventHandler: EventHandler,
-      loggers: Array[Logger]): Array[BaseTask] = {
-
+      loggers: Array[Logger],
+      continuation: Array[BaseTask] => Unit): Unit = {
     val suiteIO = loadSuite(task.fullyQualifiedName(), cl).fold(IO.unit) {
       suite =>
         loggers.foreach(
@@ -47,14 +48,16 @@ final class IOTask(task: TaskDef, cl: ClassLoader) extends BaseTask {
         })
     }
 
-    suiteIO.map(_ => Array.empty[BaseTask]).unsafeRunSync()
+    suiteIO.unsafeRunAsync(_ => continuation(Array.empty))
   }
 
   def execute(
       eventHandler: EventHandler,
-      loggers: Array[Logger],
-      continuation: Array[BaseTask] => Unit): Unit =
-    continuation(execute(eventHandler, loggers))
+      loggers: Array[Logger]): Array[BaseTask] = {
+    val p = Promise[Array[BaseTask]]()
+    execute(eventHandler, loggers, tasks => p.success(tasks))
+    Await.result(p.future, Duration.Inf)
+  }
 
   def loadSuite(
       name: String,

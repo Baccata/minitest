@@ -18,13 +18,13 @@
 package minitest.runner
 
 import minitest.api.Utils.discard
-import sbt.testing.{Runner => BaseRunner, Task => BaseTask, _}
+import sbt.testing.{ Runner => BaseRunner, Task => BaseTask, _ }
 
 final class IORunner(
-  val args: Array[String],
-  val remoteArgs: Array[String],
-  classLoader: ClassLoader)
-  extends BaseRunner {
+    val args: Array[String],
+    val remoteArgs: Array[String],
+    classLoader: ClassLoader)
+    extends BaseRunner {
 
   def done(): String = ""
 
@@ -41,5 +41,5 @@ final class IORunner(
     serializer(task.taskDef())
 
   def deserializeTask(task: String, deserializer: String => TaskDef): BaseTask =
-    new Task(deserializer(task), classLoader)
+    new IOTask(deserializer(task), classLoader)
 }
